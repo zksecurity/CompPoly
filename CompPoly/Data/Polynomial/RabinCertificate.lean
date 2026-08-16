@@ -389,4 +389,14 @@ theorem irreducible_of_rabin_degree_six {F : Type*} [Field F] [Fintype F] {f : F
   irreducible_of_rabin_two_prime_factors h_deg (by norm_num) primeFactors_six h_trace
     (by simpa using h_cop₃) (by simpa using h_cop₂)
 
+theorem irreducible_of_rabin_degree_six_of_card {F : Type*} [Field F] [Fintype F]
+    {f : F[X]} (q : ℕ) (hq : Fintype.card F = q)
+    (h_deg : f.natDegree = 6)
+    (h_trace : f ∣ X ^ (q ^ 6) - X)
+    (h_cop₃ : IsCoprime f (X ^ (q ^ 3) - X))
+    (h_cop₂ : IsCoprime f (X ^ (q ^ 2) - X)) :
+    Irreducible f := by
+  subst hq
+  exact irreducible_of_rabin_degree_six h_deg h_trace h_cop₃ h_cop₂
+
 end CompPoly.RabinCert
