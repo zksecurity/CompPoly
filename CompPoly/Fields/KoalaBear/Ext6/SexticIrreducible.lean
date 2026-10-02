@@ -135,16 +135,37 @@ theorem sextic_cop2_bezout_check :
       = true := by rfl
 
 /-- **`X^6 + X^3 + 1` is irreducible over KoalaBear**, by Rabin's test at a degree with two prime
-factors, with kernel-checked certificates for all three conditions. -/
-theorem sexticPoly_irreducible : Irreducible sexticPoly := by
-  have hcard : Fintype.card Field = fieldSize := ZMod.card _
-  refine irreducible_of_rabin_degree_six hcard sexticPoly_natDegree ?_ ?_ ?_
-  · exact dvd_X_pow_sub_X_of_runChain toPoly_sexticL sexticPoly_ne_zero
-      sextic_trace_chain sextic_trace_exp
-  · exact isCoprime_X_pow_sub_X_of_runChain toPoly_sexticL sexticPoly_ne_zero
-      sextic_cop3_chain sextic_cop3_exp sextic_cop3_w_check sextic_cop3_bezout_check
-  · exact isCoprime_X_pow_sub_X_of_runChain toPoly_sexticL sexticPoly_ne_zero
-      sextic_cop2_chain sextic_cop2_exp sextic_cop2_w_check sextic_cop2_bezout_check
+factors, with kernel-checked certificates for all three conditions.
+
+Applied at `ZMod fieldSize` with `ZMod`'s own instances, and written as one application with
+every argument fixed, rather than as `refine` against the `Field`-shaped goal. This is for the
+same reason the section comment in `CompPoly/Data/Polynomial/Rabin.lean` gives for stating the
+criteria at a numeral: it keeps a huge exponent away from any defeq the kernel might discharge by
+reduction.
+
+`Field` is an `abbrev` for `ZMod fieldSize`, but its instances are not the same *terms*: the
+criteria at `F := Field` expects `@Polynomial.commRing Field (Field.toCommRing instFieldField)`
+where the certificate lemmas, stated over `(ZMod p)[X]`, supply
+`@Polynomial.commRing (ZMod fieldSize) (ZMod.commRing fieldSize)`. The two are definitionally
+equal, so the elaborator reconciles them; but a cold kernel replay from an empty environment need
+not take the same path, and the terms carrying them are `X ^ (fieldSize ^ d)`. Once congruence
+does not shortcut, the kernel falls back to reducing that power through
+`Polynomial.pow → npowRec → Nat.rec`, one exponent step at a time, and the replay never finishes.
+Fixing every argument confines both instance paths to one side each, so the only place they meet
+is `Irreducible sexticPoly` itself, where no exponent appears. Measured on a cold replay of this
+declaration's closure: 5.8s, against a deep-recursion failure for the `refine` form.
+
+`BF64.basePoly_irreducible` and `Aes.modulus_irreducible` already pass `ZMod.card 2` and so were
+never affected. -/
+theorem sexticPoly_irreducible : Irreducible sexticPoly :=
+  @irreducible_of_rabin_degree_six (ZMod fieldSize) (ZMod.instField fieldSize)
+    (ZMod.fintype fieldSize) sexticPoly fieldSize (ZMod.card _) sexticPoly_natDegree
+    (dvd_X_pow_sub_X_of_runChain toPoly_sexticL sexticPoly_ne_zero
+      sextic_trace_chain sextic_trace_exp)
+    (isCoprime_X_pow_sub_X_of_runChain toPoly_sexticL sexticPoly_ne_zero
+      sextic_cop3_chain sextic_cop3_exp sextic_cop3_w_check sextic_cop3_bezout_check)
+    (isCoprime_X_pow_sub_X_of_runChain toPoly_sexticL sexticPoly_ne_zero
+      sextic_cop2_chain sextic_cop2_exp sextic_cop2_w_check sextic_cop2_bezout_check)
 
 instance : Fact (Irreducible sexticPoly) := ⟨sexticPoly_irreducible⟩
 
